@@ -1,0 +1,20 @@
+# --- The Core Brain ---
+langchain>=0.2.0
+langchain-groq>=0.1.3
+langchain-community>=0.2.0
+
+# --- The Orchestrator (Agent Logic) ---
+langgraph>=0.0.50
+
+# --- The Tools (Search & Data) ---
+tavily-python>=0.3.3
+pandas>=2.2.0
+
+# --- The Memory (Vector DB) ---
+chromadb>=0.5.0
+sentence-transformers>=2.7.0
+
+# --- Utilities ---
+python-dotenv>=1.0.1
+pydantic>=2.7.0
+textstat>=0.7.3

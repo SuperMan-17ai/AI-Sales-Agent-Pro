@@ -1,0 +1,14 @@
+# Credentials
+.env
+
+# Python
+venv/
+__pycache__/
+*.pyc
+
+# Data & Databases
+chroma_db/
+data/*.csv
+
+# Streamlit
+.streamlit/
