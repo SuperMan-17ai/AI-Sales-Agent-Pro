@@ -8,7 +8,7 @@ from .rag import get_hyde_retriever
 from .tools import get_search_tool, scrape_website
 
 def get_llm(temp: float = 0.0) -> ChatGroq:
-    return ChatGroq(model="llama-3.3-70b-versatile", temperature=temp)
+    return ChatGroq(model="llama-3.1-8b-instant", temperature=temp)
 
 # --- PARALLEL NODE 1 ---
 def news_node(state: AgentState) -> Dict[str, Any]:
