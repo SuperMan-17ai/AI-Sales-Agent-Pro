@@ -57,26 +57,43 @@ def filter_node(state: AgentState) -> Dict[str, Any]:
 # --- WRITER NODE ---
 def writer_node(state: AgentState) -> Dict[str, Any]:
     print(f"✍️ Drafting email for: {state['lead_name']}...")
+    
+    # Retrieve proof/case study from vector DB
     search_func = get_hyde_retriever()
     docs = search_func(state['company'], state.get('research_summary', ''))
     case_study = docs[0].page_content if docs else "We help similar companies scale."
     
-    # 🚨 THE FIX: Give the AI your identity and ban placeholders!
+    # Extract sender info with fallback defaults
+    s_name = state.get('sender_name', 'John')
+    s_comp = state.get('sender_company', 'AI Sales Pro')
+    s_prod = state.get('sender_product', 'AI-powered lead research tools')
+
     prompt = ChatPromptTemplate.from_template(
-        "Write a cold email from {sender_name} at {sender_company}. We sell {sender_product}. "
-        "Write to {name}. Context: {context}. PROOF: {proof}. "
-        "FEEDBACK TO FIX: {feedback}. Max 100 words. "
-        "RULE: NEVER use placeholders like [Company Name] or [Your Name]. Write the actual text."
+        "You are a Senior Sales Executive at {sender_company}. Your name is {sender_name}. "
+        "You are writing a cold email to {name} at {company} to sell {sender_product}. "
+        "Context on them: {context}. "
+        "Proof of our success: {proof}. "
+        "CRITIQUE FEEDBACK TO FIX: {feedback}. "
+        "\n\n"
+        "STRICT RULES:\n"
+        "1. Max 100 words.\n"
+        "2. Use a professional, peer-to-peer tone.\n"
+        "3. NEVER use square brackets like [Your Name] or [Company].\n"
+        "4. Sign off specifically as '{sender_name}, {sender_company}'.\n"
+        "5. Focus on how {sender_product} solves a specific problem found in the context."
     )
+    
     email: Any = (prompt | get_llm(0.7) | StrOutputParser()).invoke({
-        "sender_name": state.get('sender_name', 'Sales Rep'),
-        "sender_company": state.get('sender_company', 'Our AI Company'),
-        "sender_product": state.get('sender_product', 'B2B AI Automation'),
+        "sender_name": s_name,
+        "sender_company": s_comp,
+        "sender_product": s_prod,
         "name": state['lead_name'], 
+        "company": state['company'],
         "context": state.get('research_summary', ''), 
         "proof": case_study, 
         "feedback": state.get('critique_feedback', "")
     })
+    
     return {"draft_email": str(email)}
 # --- CRITIC NODE ---
 def critic_node(state: AgentState) -> Dict[str, Any]:
