@@ -1,43 +1,72 @@
-from typing import Literal, Any
-from langgraph.graph import StateGraph, START  # <-- Removed END from here!
-from .state import AgentState
-from .agents import news_node, tech_node, filter_node, writer_node, critic_node
+import operator
+from typing import Annotated, Any, Dict, List, TypedDict
+from langgraph.graph import StateGraph, START, END
 
-def filter_router(state: AgentState) -> Literal["writer", "__end__"]:
-    if state.get("is_qualified"):
-        return "writer"
-    return "__end__"
+# --- 1. THE SHARED MEMORY (AGENT STATE) ---
+class AgentState(TypedDict):
+    # User Input Data
+    sender_name: str
+    sender_company: str
+    sender_product: str
+    lead_name: str
+    company: str
+    
+    # Research & Logic Data
+    # Annotated[List, operator.add] allows parallel nodes to append to this list
+    research_snippets: Annotated[List[str], operator.add]
+    research_summary: str
+    is_qualified: bool
+    qualification_reason: str
+    draft_email: str
+    iteration_count: int
 
-def critic_router(state: AgentState) -> Literal["writer", "__end__"]:
-    if state.get("is_perfect"):
-        return "__end__"
-    return "writer"
+# --- 2. THE AGENT NODES (FUNCTIONS) ---
 
-def build_graph() -> Any:
-    workflow = StateGraph(AgentState)
+def news_node(state: AgentState) -> Dict[str, Any]:
+    print(f"📡 News Node: Searching for recent {state['company']} updates...")
+    # Your Tavily Search Logic here
+    new_info = [f"Found news about {state['company']} expansion."]
+    return {"research_snippets": new_info}
 
-    # Add Nodes
-    workflow.add_node("news", news_node)
-    workflow.add_node("tech", tech_node)
-    workflow.add_node("filter", filter_node)
-    workflow.add_node("writer", writer_node)
-    workflow.add_node("critic", critic_node)
+def tech_node(state: AgentState) -> Dict[str, Any]:
+    print(f"💻 Tech Node: Scraping {state['company']} website...")
+    # Your BeautifulSoup Scraper Logic here
+    tech_info = [f"{state['company']} is using modern tech stacks."]
+    return {"research_snippets": tech_info}
 
-    # Parallel Start
-    workflow.add_edge(START, "news")
-    workflow.add_edge(START, "tech")
+def filter_node(state: AgentState) -> Dict[str, Any]:
+    """Currently bypassed for testing, but registered in the system."""
+    return {"is_qualified": True, "qualification_reason": "Testing Mode: Auto-Pass"}
 
-    # NEW: Connect research directly to the writer
-    workflow.add_edge("news_node", "writer_node")
-    workflow.add_edge("tech_node", "writer_node")
+def writer_node(state: AgentState) -> Dict[str, Any]:
+    print(f"✍️ Writer Node: Drafting email for {state['lead_name']}...")
+    # Logic: Combines all research_snippets into a personalized draft
+    full_context = " ".join(state['research_snippets'])
+    email = f"Hi {state['lead_name']}, I saw that {state['company']} is {full_context}..."
+    return {"draft_email": email}
 
-    # You can comment out the filter edges for now
-    #workflow.add_edge("filter_node", "writer_node")
+# --- 3. THE GRAPH ORCHESTRATOR (THE MAP) ---
 
-    # Reflection Loop Logic
-    workflow.add_edge("writer", "critic")
-    workflow.add_conditional_edges("critic", critic_router)
+# Initialize the workflow
+workflow = StateGraph(AgentState)
 
-    return workflow.compile()
+# Define the Nodes
+workflow.add_node("news_node", news_node)
+workflow.add_node("tech_node", tech_node)
+workflow.add_node("filter_node", filter_node)
+workflow.add_node("writer_node", writer_node)
 
-app = build_graph()
+# --- THE "BYPASS" WIRING ---
+# Start both research agents at the SAME time (Parallelism)
+workflow.add_edge(START, "news_node")
+workflow.add_edge(START, "tech_node")
+
+# Both research agents feed directly into the Writer (Skipping Filter)
+workflow.add_edge("news_node", "writer_node")
+workflow.add_edge("tech_node", "writer_node")
+
+# End the process after the draft is written
+workflow.add_edge("writer_node", END)
+
+# Compile the Graph
+app = workflow.compile()
