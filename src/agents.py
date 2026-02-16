@@ -61,18 +61,23 @@ def writer_node(state: AgentState) -> Dict[str, Any]:
     docs = search_func(state['company'], state.get('research_summary', ''))
     case_study = docs[0].page_content if docs else "We help similar companies scale."
     
+    # 🚨 THE FIX: Give the AI your identity and ban placeholders!
     prompt = ChatPromptTemplate.from_template(
-        "Write a cold email to {name}. Context: {context}. PROOF: {proof}. "
-        "FEEDBACK TO FIX (if any): {feedback}. Max 100 words."
+        "Write a cold email from {sender_name} at {sender_company}. We sell {sender_product}. "
+        "Write to {name}. Context: {context}. PROOF: {proof}. "
+        "FEEDBACK TO FIX: {feedback}. Max 100 words. "
+        "RULE: NEVER use placeholders like [Company Name] or [Your Name]. Write the actual text."
     )
     email: Any = (prompt | get_llm(0.7) | StrOutputParser()).invoke({
+        "sender_name": state.get('sender_name', 'Sales Rep'),
+        "sender_company": state.get('sender_company', 'Our AI Company'),
+        "sender_product": state.get('sender_product', 'B2B AI Automation'),
         "name": state['lead_name'], 
         "context": state.get('research_summary', ''), 
         "proof": case_study, 
         "feedback": state.get('critique_feedback', "")
     })
     return {"draft_email": str(email)}
-
 # --- CRITIC NODE ---
 def critic_node(state: AgentState) -> Dict[str, Any]:
     iteration = state.get("iteration_count", 0)

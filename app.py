@@ -10,6 +10,12 @@ from src.graph import app as agent_app
 st.set_page_config(page_title="Pro Sales AI", page_icon="🚀", layout="wide")
 st.title("🚀 Autonomous Sales AI (Industry Grade)")
 
+# 🚨 THE FIX: Add a sidebar for the user's identity
+st.sidebar.header("🎯 Your Campaign Details")
+sender_name = st.sidebar.text_input("Your Name:", "John Doe")
+sender_company = st.sidebar.text_input("Your Company:", "AI Workflow Solutions")
+sender_product = st.sidebar.text_area("What are you selling?", "AI agents that reduce SDR research time.")
+
 uploaded_file = st.file_uploader("Upload leads.csv", type=["csv"])
 
 if uploaded_file:
