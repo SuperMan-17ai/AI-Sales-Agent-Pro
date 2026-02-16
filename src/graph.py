@@ -27,13 +27,13 @@ def build_graph() -> Any:
     workflow.add_edge(START, "news")
     workflow.add_edge(START, "tech")
 
-    # Merge into Filter
-    workflow.add_edge("news", "filter")
-    workflow.add_edge("tech", "filter")
+    # NEW: Connect research directly to the writer
+    workflow.add_edge("news_node", "writer_node")
+    workflow.add_edge("tech_node", "writer_node")
 
-    # Gatekeeper Logic
-    workflow.add_conditional_edges("filter", filter_router)
-    
+    # You can comment out the filter edges for now
+    workflow.add_edge("filter_node", "writer_node")
+
     # Reflection Loop Logic
     workflow.add_edge("writer", "critic")
     workflow.add_conditional_edges("critic", critic_router)
