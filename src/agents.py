@@ -38,14 +38,19 @@ def filter_node(state: AgentState) -> Dict[str, Any]:
     summary = "\n".join(snippets) if snippets else "General research."
 
     # We use a simple string check first to avoid JSON parsing drama
+    # STRICT PROMPT: We want deterministic YES/NO.
     prompt = ChatPromptTemplate.from_template(
         "Based on this research: {summary}\n\n"
         "Should we reach out to {name} at {company} regarding {product}?\n"
-        "Answer with 'YES' or 'NO' first, then a short reason."
+        "CRITICAL RULES:\n"
+        "1. Answer 'YES' if the company is in a relevant industry or fits the product context.\n"
+        "2. Answer 'NO' ONLY if the company doesn't exist, is out of business, or is completely irrelevant.\n"
+        "3. Answer with 'YES' or 'NO' first, then a short reason."
     )
     
     # Get raw text response
-    raw_res = (prompt | get_llm(0.1) | StrOutputParser()).invoke({
+    # Reduce temperature to 0.0 for deterministic results
+    raw_res = (prompt | get_llm(0.0) | StrOutputParser()).invoke({
         "summary": summary,
         "name": state['lead_name'],
         "company": state['company'],
