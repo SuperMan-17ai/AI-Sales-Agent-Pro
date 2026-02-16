@@ -32,7 +32,7 @@ def build_graph() -> Any:
     workflow.add_edge("tech_node", "writer_node")
 
     # You can comment out the filter edges for now
-    workflow.add_edge("filter_node", "writer_node")
+    #workflow.add_edge("filter_node", "writer_node")
 
     # Reflection Loop Logic
     workflow.add_edge("writer", "critic")
