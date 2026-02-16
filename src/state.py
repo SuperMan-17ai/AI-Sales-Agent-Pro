@@ -2,7 +2,7 @@ from typing import TypedDict, List, Annotated, Optional
 import operator
 
 class AgentState(TypedDict):
-    # Sender Data (NEW)
+    # Sender Data
     sender_name: str
     sender_company: str
     sender_product: str
@@ -11,11 +11,15 @@ class AgentState(TypedDict):
     lead_name: str
     company: str
     
-    # ... (keep the rest of your state exactly the same) ...
+    # Research Data
     research_snippets: Annotated[List[str], operator.add]
     research_summary: str
+    
+    # Qualification Data
     is_qualified: bool
     qualification_reason: str
+    
+    # Email Drafting Data
     draft_email: str
     critique_feedback: Optional[str]
     is_perfect: bool

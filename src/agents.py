@@ -6,9 +6,10 @@ from langchain_core.output_parsers import JsonOutputParser, StrOutputParser
 from .state import AgentState
 from .rag import get_hyde_retriever
 from .tools import get_search_tool, scrape_website
+from .config import Config
 
 def get_llm(temp: float = 0.0) -> ChatGroq:
-    return ChatGroq(model="llama-3.1-8b-instant", temperature=temp)
+    return ChatGroq(model=Config.LLM_MODEL, temperature=temp)
 
 # --- PARALLEL NODE 1 ---
 def news_node(state: AgentState) -> Dict[str, Any]:

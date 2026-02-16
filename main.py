@@ -22,15 +22,19 @@ def run():
         
         # Initialize the state with basic info
         initial_state = {
+            "sender_name": "AI Sales Agent",
+            "sender_company": "Automated Systems",
+            "sender_product": "AI Sales Solutions",
             "lead_name": lead_name,
             "company": company,
-            "role": row['role'],
-            "email": "unknown", # We don't have this yet
-            "linkedin_summary": "",
-            "recent_news": "",
+            "research_snippets": [],
+            "research_summary": "",
             "is_qualified": False,
             "qualification_reason": "",
-            "draft_email": ""
+            "draft_email": "",
+            "critique_feedback": None,
+            "is_perfect": False,
+            "iteration_count": 0
         }
         
         # Run the Graph!

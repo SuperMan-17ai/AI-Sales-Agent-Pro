@@ -43,6 +43,9 @@ if uploaded_file:
             log_txt.text(f"⏳ Processing {i + 1}/{len(df)}: {lead_name} @ {company}...")
             
             initial_state = {
+                "sender_name": sender_name,
+                "sender_company": sender_company,
+                "sender_product": sender_product,
                 "lead_name": lead_name,
                 "company": company,
                 "research_snippets": [],
