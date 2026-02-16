@@ -1,29 +1,21 @@
-# src/state.py
-from typing import TypedDict, List
+from typing import TypedDict, List, Annotated, Optional
+import operator
 
 class AgentState(TypedDict):
-    """
-    This is the 'Shared Brain' of our Agent.
-    Every node (Researcher, Filter, Writer) will read/write to this dictionary.
-    """
-    
-    # 1. Input Data (From your CSV)
+    # Core Data
     lead_name: str
     company: str
-    role: str
-    email: str
     
-    # 2. Research Data (Added by the Research Node)
-    linkedin_summary: str   # What we found on their profile
-    recent_news: str        # Latest news about their company
+    # Research Data - 'Annotated' tells LangGraph how to merge parallel tasks
+    research_snippets: Annotated[List[str], operator.add]
+    research_summary: str
     
-    # 3. Decision Data (Added by the Filter Node)
-    is_qualified: bool      # True/False (Did they pass our checks?)
-    qualification_reason: str # Why did we pass/fail them?
+    # Gatekeeper Logic
+    is_qualified: bool
+    qualification_reason: str
     
-    # 4. Strategy Data (Added by the RAG Node)
-    relevant_case_study: str # The best case study we found in our DB
-    
-    # 5. Output Data (Added by the Writer Node)
-    draft_email: str        # The final email content
-    critique_feedback: str  # (Optional) If we add an 'Editor' agent later
+    # Writer & Reflection Loop
+    draft_email: str
+    critique_feedback: Optional[str]
+    is_perfect: bool
+    iteration_count: int

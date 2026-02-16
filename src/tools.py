@@ -1,31 +1,30 @@
-# src/tools.py
 import os
-from dotenv import load_dotenv
+import requests  # type: ignore
+from bs4 import BeautifulSoup  # type: ignore
 from langchain_community.tools.tavily_search import TavilySearchResults
 
-# Load API Keys
-load_dotenv()
+# ... rest of your code stays exactly the same ...
 
-def get_search_tool():
-    """
-    Returns a Tool that can search the web.
-    We set 'max_results=2' to save tokens (money).
-    """
+def get_search_tool() -> TavilySearchResults:
     api_key = os.getenv("TAVILY_API_KEY")
     if not api_key:
-        raise ValueError("❌ TAVILY_API_KEY missing in .env")
-        
-    # k=2 means "Give me the top 2 results only"
-    return TavilySearchResults(k=2)
+        raise ValueError("CRITICAL: TAVILY_API_KEY is missing from .env file.")
+    return TavilySearchResults(api_key=api_key)
 
-def search_web(query: str):
-    """
-    A simple wrapper function to test the tool manually.
-    """
-    tool = get_search_tool()
+def scrape_website(url: str) -> str:
+    """Scrapes a website safely and returns clean text."""
     try:
-        results = tool.invoke(query)
-        # Combine the snippets into one string for the AI to read
-        return "\n".join([res['content'] for res in results])
+        # Prevent hanging forever with a 10-second timeout
+        response = requests.get(url, timeout=10)
+        response.raise_for_status() # Check for 404/500 errors
+        
+        soup = BeautifulSoup(response.text, 'html.parser')
+        
+        # Strip out code, keep only text
+        for script in soup(["script", "style"]):
+            script.extract()
+            
+        text = " ".join(soup.get_text().split())
+        return text[:2000] # Return max 2000 chars to save tokens
     except Exception as e:
-        return f"Error searching web: {e}"
+        return f"Scraping failed for {url}: {str(e)}"

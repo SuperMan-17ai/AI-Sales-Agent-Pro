@@ -1,97 +1,70 @@
 import streamlit as st
 import pandas as pd
+from dotenv import load_dotenv
+
+# Load environment variables from .env file BEFORE importing the graph
+load_dotenv()
+
 from src.graph import app as agent_app
 
-# Page Config
-st.set_page_config(page_title="AI Sales SDR", page_icon="🚀", layout="wide")
+st.set_page_config(page_title="Pro Sales AI", page_icon="🚀", layout="wide")
+st.title("🚀 Autonomous Sales AI (Industry Grade)")
 
-st.title("🚀 Autonomous AI Sales Agent")
-st.markdown("### Upload any CSV -> Map Columns -> Get Emails")
-
-# 1. File Uploader
 uploaded_file = st.file_uploader("Upload leads.csv", type=["csv"])
 
-if uploaded_file is not None:
+if uploaded_file:
     df = pd.read_csv(uploaded_file)
-    st.write("✅ Preview of your data:")
-    st.dataframe(df.head(3))
-
-    # --- THE FIX: DYNAMIC COLUMN MAPPING ---
-    st.subheader("Step 2: Map Your Columns")
     col1, col2 = st.columns(2)
     
     with col1:
-        # Ask user: "Which column contains the Person's Name?"
-        name_col = st.selectbox("Select the 'Name' column:", df.columns)
+        # Defaults to the 1st column
+        name_col = st.selectbox("Name Column:", df.columns, index=0)
         
     with col2:
-        # Ask user: "Which column contains the Company Name?"
-        company_col = st.selectbox("Select the 'Company' column:", df.columns)
-        
-    st.info(f"Using '{name_col}' for Names and '{company_col}' for Companies.")
+        # Defaults to the 2nd column
+        default_company_idx = 1 if len(df.columns) > 1 else 0
+        company_col = st.selectbox("Company Column:", df.columns, index=default_company_idx)
 
-    # 2. The "Start" Button
-    if st.button("Start Outreach Agent"):
-        
-        progress_bar = st.progress(0)
+    if st.button("Start Agents"):
+        progress = st.progress(0)
         results = []
-        status_text = st.empty()
+        log_txt = st.empty()
         
-        total_leads = len(df)
-        
-        for index, row in df.iterrows():
-            # USE THE MAPPED COLUMNS (Not hardcoded names)
+        for i, (index, row) in enumerate(df.iterrows()):
             lead_name = str(row[name_col])
             company = str(row[company_col])
             
-            # Update UI
-            status_text.text(f"⏳ Processing {index+1}/{total_leads}: {lead_name} @ {company}...")
+            log_txt.text(f"⏳ Processing {i + 1}/{len(df)}: {lead_name} @ {company}...")
             
-            # Initial State
             initial_state = {
                 "lead_name": lead_name,
                 "company": company,
-                "linkedin_summary": "",
-                "draft_email": ""
+                "research_snippets": [],
+                "research_summary": "",
+                "is_qualified": False,
+                "qualification_reason": "",
+                "draft_email": "",
+                "critique_feedback": None,
+                "is_perfect": False,
+                "iteration_count": 0
             }
             
-            try:
-                # Run the Agent!
-                output = agent_app.invoke(initial_state)
-                
-                # Check results
-                is_qualified = output.get('is_qualified', False)
-                reason = output.get('qualification_reason', "Unknown")
-                email_draft = output.get('draft_email', "N/A")
-
-                # Save Results
-                results.append({
-                    "Original_Name": lead_name,
-                    "Original_Company": company,
-                    "Status": "✅ Qualified" if is_qualified else "🚫 Disqualified",
-                    "Reason": reason if not is_qualified else "Matches Criteria",
-                    "AI_Email_Draft": email_draft if is_qualified else ""
-                })
-                
-            except Exception as e:
-                st.error(f"Error processing {lead_name}: {e}")
+            output = agent_app.invoke(initial_state) # type: ignore
             
-            # Update Progress
-            progress_bar.progress((index + 1) / total_leads)
+            is_qual = output.get('is_qualified', False)
+            results.append({
+                "Name": lead_name,
+                "Company": company,
+                "Status": "✅ Yes" if is_qual else "🚫 No",
+                "Reason": output.get('qualification_reason', ''),
+                "Draft": output.get('draft_email', '') if is_qual else ""
+            })
+            
+            progress.progress((i + 1) / len(df))
 
-        # 3. Show Final Results
-        status_text.text("✅ All leads processed!")
-        results_df = pd.DataFrame(results)
+        log_txt.text("✅ All leads processed!")
+        final_df = pd.DataFrame(results)
+        st.dataframe(final_df)
         
-        st.subheader("Generated Campaign Results")
-        st.dataframe(results_df)
-        
-        # 4. Download Button
-        csv = results_df.to_csv(index=False).encode('utf-8')
-        st.download_button(
-            "Download Results CSV",
-            csv,
-            "ai_outreach_results.csv",
-            "text/csv",
-            key='download-csv'
-        )
+        csv = final_df.to_csv(index=False).encode('utf-8')
+        st.download_button("Download CSV", csv, "results.csv", "text/csv")

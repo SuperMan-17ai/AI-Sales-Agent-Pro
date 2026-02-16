@@ -1,0 +1,8 @@
+[tool.pyright]
+typeCheckingMode = "strict"
+pythonVersion = "3.11"
+exclude = [".venv", "venv", "**/__pycache__"]
+reportMissingTypeStubs = false
+reportUnknownMemberType = false
+reportUnknownVariableType = false
+reportUnknownArgumentType = false

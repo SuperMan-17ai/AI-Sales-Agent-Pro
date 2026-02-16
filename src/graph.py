@@ -1,49 +1,43 @@
-# src/graph.py
-import json
-from langgraph.graph import StateGraph, END
+from typing import Literal, Any
+from langgraph.graph import StateGraph, START  # <-- Removed END from here!
 from .state import AgentState
-from .agents import research_node, filter_node, writer_node
+from .agents import news_node, tech_node, filter_node, writer_node, critic_node
 
-# 1. Initialize the Graph with our State
-workflow = StateGraph(AgentState)
+def filter_router(state: AgentState) -> Literal["writer", "__end__"]:
+    if state.get("is_qualified"):
+        return "writer"
+    return "__end__"
 
-# 2. Add the Nodes (The Workers)
-workflow.add_node("researcher", research_node)
-workflow.add_node("filter", filter_node)
-workflow.add_node("writer", writer_node)
+def critic_router(state: AgentState) -> Literal["writer", "__end__"]:
+    if state.get("is_perfect"):
+        return "__end__"
+    return "writer"
 
-# 3. Define the Edges (The Logic Flow)
-# START -> Researcher
-workflow.set_entry_point("researcher")
+def build_graph() -> Any:
+    workflow = StateGraph(AgentState)
 
-# Researcher -> Filter (Always move forward, never look back)
-workflow.add_edge("researcher", "filter")
+    # Add Nodes
+    workflow.add_node("news", news_node)
+    workflow.add_node("tech", tech_node)
+    workflow.add_node("filter", filter_node)
+    workflow.add_node("writer", writer_node)
+    workflow.add_node("critic", critic_node)
 
-# Filter -> Conditional Logic
-def filter_router(state: AgentState):
-    """
-    Decides where to go after the Filter Node.
-    """
-    # Force boolean check (handle strings just in case)
-    qualified = state.get('is_qualified')
+    # Parallel Start
+    workflow.add_edge(START, "news")
+    workflow.add_edge(START, "tech")
+
+    # Merge into Filter
+    workflow.add_edge("news", "filter")
+    workflow.add_edge("tech", "filter")
+
+    # Gatekeeper Logic
+    workflow.add_conditional_edges("filter", filter_router)
     
-    if qualified is True:
-        return "writer"  # Go to Writer
-    else:
-        return END       # Stop completely (Save money)
+    # Reflection Loop Logic
+    workflow.add_edge("writer", "critic")
+    workflow.add_conditional_edges("critic", critic_router)
 
-# Add the conditional edge
-workflow.add_conditional_edges(
-    "filter",           # From this node
-    filter_router,      # Using this logic function
-    {                   # Mapping results to destinations
-        "writer": "writer",
-        END: END
-    }
-)
+    return workflow.compile()
 
-# Writer -> END (Done)
-workflow.add_edge("writer", END)
-
-# 4. Compile the Application
-app = workflow.compile()
+app = build_graph()
