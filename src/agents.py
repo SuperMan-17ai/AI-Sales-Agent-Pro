@@ -32,27 +32,34 @@ def tech_node(state: AgentState) -> Dict[str, Any]:
 
 # --- FILTER NODE ---
 def filter_node(state: AgentState) -> Dict[str, Any]:
+    print(f"🛡️ Filtering {state['lead_name']}...")
     snippets = state.get('research_snippets', [])
-    summary = "\n".join(snippets) if snippets else "No data."
-    
-    print(f"🛡️ Filtering: {state['lead_name']}...")
+    summary = "\n".join(snippets) if snippets else "General research."
+
+    # We use a simple string check first to avoid JSON parsing drama
     prompt = ChatPromptTemplate.from_template(
-        "Should we sell B2B AI software to {name} at {company}? Context: {summary}. "
-        "Return ONLY JSON: {{'is_qualified': bool, 'reason': str}}"
+        "Based on this research: {summary}\n\n"
+        "Should we reach out to {name} at {company} regarding {product}?\n"
+        "Answer with 'YES' or 'NO' first, then a short reason."
     )
     
-    try:
-        res: Any = (prompt | get_llm() | JsonOutputParser()).invoke({
-            "name": state['lead_name'], 
-            "company": state['company'], 
-            "summary": summary
-        })
-        is_qual = bool(res.get('is_qualified', False)) if isinstance(res, dict) else False
-        reason = str(res.get('reason', 'Parse error')) if isinstance(res, dict) else "Error"
-    except Exception as e:
-        is_qual, reason = False, f"Error: {e}"
-        
-    return {"is_qualified": is_qual, "qualification_reason": reason, "research_summary": summary}
+    # Get raw text response
+    raw_res = (prompt | get_llm(0.1) | StrOutputParser()).invoke({
+        "summary": summary,
+        "name": state['lead_name'],
+        "company": state['company'],
+        "product": state.get('sender_product', 'our services')
+    })
+
+    # Simple Logic: If it says 'NO' (case insensitive), we disqualify. 
+    # Otherwise, we go for it!
+    is_qual = not raw_res.strip().upper().startswith("NO")
+    
+    return {
+        "is_qualified": is_qual, 
+        "qualification_reason": raw_res, 
+        "research_summary": summary
+    }
 
 # --- WRITER NODE ---
 def writer_node(state: AgentState) -> Dict[str, Any]:
